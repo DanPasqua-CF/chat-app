@@ -39,7 +39,13 @@ Feature: User Page Customization
 **I should be able to** send messages to my friends and family members  
 **So that** I can exchange the latest news.
 
-
+```gherkin
+Feature: Chat Page Messaging Capabilities
+  Scenario: User should be able to send and receive messages
+    Given the user is on the Chat page;
+    When the user views the screen;
+    Then the user should see messages from themselves and their recipients.
+``` 
 
 
 ### 3. Sending Messages and Sharing Location  
