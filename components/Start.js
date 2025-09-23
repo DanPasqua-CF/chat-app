@@ -17,7 +17,7 @@ const Start = ({ navigation }) => {
       <View style={styles.container}>
         <Text style={styles.title}>Let's Talk</Text>
 
-        {/* Box containing icon.svg, TextInput field, color options and Start chatting button */}
+        {/* Box containing icon.svg, TextInput field and Start chatting button */}
         <View style={styles.box}>
           
           {/* Your name input */}
@@ -30,22 +30,6 @@ const Start = ({ navigation }) => {
               placeholder="Your name"
               placeholderTextColor="rgba(117, 112, 131, 0.5)"
             />
-          </View>
-
-          {/* Color options */}
-          <Text style={styles.chooseColorText}>Choose background color:</Text>
-          <View style={styles.colorOptionsContainer}>
-            {colorOptions.map(color => (
-              <TouchableOpacity
-                key={color}
-                style={[
-                  styles.colorCircle,
-                  { backgroundColor: color },
-                  selectedColor === color && styles.selectedCircle
-                ]}
-                onPress={() => setSelectedColor(color)}
-              />
-            ))}
           </View>
 
           {/* Start chatting button */}
