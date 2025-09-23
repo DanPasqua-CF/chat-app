@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 /* Screen imports */
 import Start from './components/Start';
@@ -11,20 +12,24 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName='Start'>
-        {/* Start screen */}
-        <Stack.Screen
-          name='Start'
-          component={Start}
-        />
-        {/* Chat screen */}
-        <Stack.Screen
-          name='Chat'
-          component={Chat}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName='Start'>
+          {/* Start screen */}
+          <Stack.Screen
+            name='Start'
+            component={Start}
+          />
+          
+          {/* Chat screen */}
+          <Stack.Screen
+            name='Chat'
+            component={Chat}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <StatusBar style='auto' />
+    </SafeAreaProvider>
   );
 }
 

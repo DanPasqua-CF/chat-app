@@ -34,6 +34,9 @@ const Start = ({ navigation }) => {
 
           {/* Start chatting button */}
           <TouchableOpacity
+            accessible={true}
+            accessibilityLabel="Start chatting"
+            accessibilityHint="Let’s you start chatting"
             style={[styles.button, { backgroundColor: '#757083' }]}
             onPress={() => navigation.navigate('Chat', { name, backgroundColor: selectedColor })}
           >

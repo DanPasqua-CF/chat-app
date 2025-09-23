@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Platform, KeyboardAvoidingView } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bubble, GiftedChat } from 'react-native-gifted-chat';
 
 const Chat = ({ route, navigation }) => {
@@ -9,9 +10,19 @@ const Chat = ({ route, navigation }) => {
   useEffect(() => {
     setMessages([
       {
-        _id: 1,
+        _id: 3,
+        text: "Hi there!",
+        createdAt: new Date() - 2000,
+        user: {
+          _id: 1,
+          name: "React Native",
+          avatar: "https://placeimg.com/140/140/any"
+        }
+      },
+      {
+        _id: 2,
         text: "Hello developer!",
-        createdAt: new Date(),
+        createdAt: new Date() - 1000,
         user: {
           _id: 2,
           name: "React Native",
@@ -19,8 +30,8 @@ const Chat = ({ route, navigation }) => {
         }
       },
       {
-        _id: 2,
-        text: "This is a system message",
+        _id: 1,
+        text: `${name} has entered the chat`,
         createdAt: new Date(),
         system: true
       }
@@ -50,25 +61,33 @@ const Chat = ({ route, navigation }) => {
   }
 
  return (
-  <View style={styles.container}>
-    <GiftedChat
-    renderBubble={renderBubble}
-    messages={messages}
-    onSend={messages => onSend(messages)}
-    user={{
-      _id: 1
-    }}
-  />
-
-  {/* Fix for handling Android keyboard covering message input */}
-  { Platform.OS === 'ios' ? <KeyboardAvoidingView behavior='padding' /> : null}
-  </View>
+  <SafeAreaView style={styles.safeArea}>
+    <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <GiftedChat
+          renderBubble={renderBubble}
+          messages={messages}
+          onSend={onSend}
+          user={{ 
+            _id: 1 
+          }}
+          placeholder="Type a message..."
+          alwaysShowSend
+        />
+      </KeyboardAvoidingView>
+  </SafeAreaView>
  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
   }
 });
 
