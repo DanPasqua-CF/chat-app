@@ -1,12 +1,27 @@
 import React, { useState } from 'react';
-import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Icon from '../assets/icon.svg';
+import { Alert, ImageBackground, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '../App';
+import { Ionicons } from '@expo/vector-icons';
 
 const colorOptions = ['#090C08', '#474056', '#8A95A5', '#B9C6AE'];
 
 const Start = ({ navigation }) => {
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(colorOptions[0]);
+
+  const signInUser = () => {
+    signInAnonymously(auth)
+      .then((res) => {
+        navigation.navigate("Chat", { userID: res.user.uid, name: name, backgroundColor: selectedColor });
+
+        Alert.alert("Signin successful");
+      })
+      .catch((err) => {
+        Alert.alert("Login unsuccessful");
+        console.error(err);
+      });
+  };
 
   return (
     /* Hero image */
@@ -22,7 +37,7 @@ const Start = ({ navigation }) => {
           
           {/* Your name input */}
           <View style={styles.inputContainer}>
-            <Icon width={20} height={20} style={styles.icon} />
+            <Ionicons name="person" size={20} color="#757083" style={styles.icon} />
             <TextInput
               style={styles.textInput}
               value={name}
@@ -38,7 +53,7 @@ const Start = ({ navigation }) => {
             accessibilityLabel="Start chatting"
             accessibilityHint="Let’s you start chatting"
             style={[styles.button, { backgroundColor: '#757083' }]}
-            onPress={() => navigation.navigate('Chat', { name, backgroundColor: selectedColor })}
+            onPress={signInUser}
           >
             <Text style={styles.buttonText}>Start chatting</Text>
           </TouchableOpacity>
@@ -92,6 +107,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '300',
     color: '#757083',
+  },
+  button: {
+    width: '100%',
+    paddingVertical: 20,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   chooseColorText: {
     fontSize: 16,
