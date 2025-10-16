@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bubble, GiftedChat } from 'react-native-gifted-chat';
 import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
@@ -7,6 +7,7 @@ import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firesto
 const Chat = ({ route, navigation, db }) => {
   const { name, userID } = route.params;
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     navigation.setOptions({ title: name });
@@ -17,20 +18,35 @@ const Chat = ({ route, navigation, db }) => {
     );
 
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      const newMessages = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: new Date(doc.data().createdAt.toMillis()),
-      }));
+      const newMessages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt.toMillis()) : new Date(),
+        };
+      });
       setMessages(newMessages);
+      setLoading(false);
+    },
+    (error) => {
+      Alert.alert("Error", "Failed to load messages.");
+      console.error(error);
+
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const onSend = (newMessages) => {
-    addDoc(collection(db, "messages"), newMessages[0]);
-  }
+  const onSend = async (newMessages = []) => {
+    try {
+      await addDoc(collection(db, "messages"), newMessages[0]);
+    } catch (error) {
+      Alert.alert("Error", "Failed to send message.");
+      console.error(error);
+    }
+  };
 
   const renderBubble = (props) => {
     return <Bubble
@@ -46,7 +62,15 @@ const Chat = ({ route, navigation, db }) => {
     />
   }
 
- return (
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <GiftedChat
@@ -80,6 +104,10 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Alert, ImageBackground, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { signInAnonymously } from 'firebase/auth';
-import { auth } from '../App';
 import { Ionicons } from '@expo/vector-icons';
+import { auth } from '../firebase';
 
 const colorOptions = ['#090C08', '#474056', '#8A95A5', '#B9C6AE'];
 
@@ -13,7 +13,12 @@ const Start = ({ navigation }) => {
   const signInUser = () => {
     signInAnonymously(auth)
       .then((res) => {
-        navigation.navigate("Chat", { userID: res.user.uid, name: name, backgroundColor: selectedColor });
+        navigation.navigate("Chat", 
+          { 
+            userID: res.user.uid, 
+            name: name, 
+            backgroundColor: selectedColor 
+          });
 
         Alert.alert("Signin successful");
       })

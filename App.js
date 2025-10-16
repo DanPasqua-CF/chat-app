@@ -2,44 +2,13 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform } from 'react-native';
-import { getApp, getApps, initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /* Screen imports */
 import Start from './components/Start';
 import Chat from './components/Chat';
 
-const firebaseConfig = {
-    apiKey: 'AIzaSyDc_nx0Kiwkr4o-uMa2qH7ylgTOTOw5gi0',
-    authDomain: 'chat-app-ff38f.firebaseapp.com',
-    projectId: 'chat-app-ff38f',
-    storageBucket: 'chat-app-ff38f.firebasestorage.app',
-    messagingSenderId: '64032007449',
-    appId: '1:64032007449:web:40fc34d22fc0fd85e8d188',
-};
-
-/* Initialize Firebase */
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-/* Initialize Firestore */
-const db = getFirestore(app);
-
-/* Initialize Firebase Authentication */
-let auth;
-
-if (Platform.OS === 'web') {
-  auth = getAuth(app);
-} 
-else {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
-}
-
-export { auth, db };
+/* Import Firestore */
+import { db } from './firebase';
 
 /* Create the navigator */
 const Stack = createNativeStackNavigator();
