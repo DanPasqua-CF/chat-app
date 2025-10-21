@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bubble, GiftedChat } from 'react-native-gifted-chat';
-import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
 
 const Chat = ({ route, navigation, db }) => {
   const { name, userID } = route.params;
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [inputText, setInputText] = useState('');
 
   useEffect(() => {
     navigation.setOptions({ title: name });
@@ -21,7 +22,7 @@ const Chat = ({ route, navigation, db }) => {
       const newMessages = snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
-          id: doc.id,
+          _id: doc.id,
           ...data,
           createdAt: data.createdAt ? new Date(data.createdAt.toMillis()) : new Date(),
         };
@@ -41,9 +42,15 @@ const Chat = ({ route, navigation, db }) => {
 
   const onSend = async (newMessages = []) => {
     try {
-      await addDoc(collection(db, "messages"), newMessages[0]);
-    } catch (error) {
-      Alert.alert("Error", "Failed to send message.");
+      const message = {
+        ...newMessages[0],
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, 'messages'), message);
+    } 
+    catch (error) {
+      Alert.alert('Error', 'Failed to send message.');
       console.error(error);
     }
   };
@@ -71,29 +78,33 @@ const Chat = ({ route, navigation, db }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+    >
       <SafeAreaView style={styles.safeArea}>
         <GiftedChat
           messages={messages}
           onSend={onSend}
-          user={{ 
-            _id: userID,
-            name: name
-          }}
+          user={{ _id: userID, name }}
           renderBubble={renderBubble}
           placeholder="Type a message..."
           alwaysShowSend
           keyboardShouldPersistTaps="handled"
           textInputProps={{
+            editable: true,
+            ...Platform.select({
+              android: {
+                importantForAccessibility: 'yes',
+              },
+            }),
             autoCorrect: false,
             autoCapitalize: 'none',
           }}
         />
-        {Platform.OS !== 'web' && (
-          <KeyboardAvoidingView behavior="padding" />
-        )}
       </SafeAreaView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
