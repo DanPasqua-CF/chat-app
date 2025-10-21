@@ -1,5 +1,4 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,6 +7,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Start from './components/Start';
 import Chat from './components/Chat';
 
+/* Import Firestore */
+import { db } from './firebase';
+
+/* Create the navigator */
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -16,28 +19,15 @@ export default function App() {
       <NavigationContainer>
         <Stack.Navigator initialRouteName='Start'>
           {/* Start screen */}
-          <Stack.Screen
-            name='Start'
-            component={Start}
-          />
+          <Stack.Screen name='Start' component={Start} />
           
           {/* Chat screen */}
-          <Stack.Screen
-            name='Chat'
-            component={Chat}
-          />
+          <Stack.Screen name='Chat'>
+            {props => <Chat db={db} {...props} />}
+          </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style='auto' />
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

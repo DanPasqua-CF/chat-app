@@ -1,50 +1,59 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
 
-const Chat = ({ route, navigation }) => {
-  const { name } = route.params;
+const Chat = ({ route, navigation, db }) => {
+  const { name, userID } = route.params;
   const [messages, setMessages] = useState([]);
-
-  useEffect(() => {
-    setMessages([
-      {
-        _id: 3,
-        text: "Hi there!",
-        createdAt: new Date(Date.now() - 2000),
-        user: {
-          _id: 1,
-          name: "React Native",
-          avatar: "https://placeimg.com/140/140/any"
-        }
-      },
-      {
-        _id: 2,
-        text: "Hello developer!",
-        createdAt: new Date(Date.now() - 1000),
-        user: {
-          _id: 2,
-          name: "React Native",
-          avatar: "https://placeimg.com/140/140/any"
-        }
-      },
-      {
-        _id: 1,
-        text: `${name} has entered the chat`,
-        createdAt: new Date(),
-        system: true
-      }
-    ]);
-  }, [name]);
+  const [loading, setLoading] = useState(true);
+  const [inputText, setInputText] = useState('');
 
   useEffect(() => {
     navigation.setOptions({ title: name });
-  }, [name]);
 
-  const onSend = (newMessages) => {
-    setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
-  }
+    const messagesQuery = query(
+      collection(db, 'messages'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const newMessages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          _id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? new Date(data.createdAt.toMillis()) : new Date(),
+        };
+      });
+      setMessages(newMessages);
+      setLoading(false);
+    },
+    (error) => {
+      Alert.alert("Error", "Failed to load messages.");
+      console.error(error);
+
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const onSend = async (newMessages = []) => {
+    try {
+      const message = {
+        ...newMessages[0],
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, 'messages'), message);
+    } 
+    catch (error) {
+      Alert.alert('Error', 'Failed to send message.');
+      console.error(error);
+    }
+  };
 
   const renderBubble = (props) => {
     return <Bubble
@@ -60,24 +69,42 @@ const Chat = ({ route, navigation }) => {
     />
   }
 
- return (
-    <View style={styles.container}>
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+    >
       <SafeAreaView style={styles.safeArea}>
         <GiftedChat
           messages={messages}
           onSend={onSend}
-          user={{ _id: 1 }}
+          user={{ _id: userID, name }}
           renderBubble={renderBubble}
           placeholder="Type a message..."
           alwaysShowSend
           keyboardShouldPersistTaps="handled"
           textInputProps={{
+            editable: true,
+            ...Platform.select({
+              android: {
+                importantForAccessibility: 'yes',
+              },
+            }),
             autoCorrect: false,
             autoCapitalize: 'none',
           }}
         />
       </SafeAreaView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -88,6 +115,10 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 
