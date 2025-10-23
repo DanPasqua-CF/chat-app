@@ -3,6 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 
 /* Screen imports */
 import Start from './components/Start';
@@ -10,7 +12,22 @@ import Chat from './components/Chat';
 
 const Stack = createNativeStackNavigator();
 
-export default function App() {
+const App = () => {
+  const firebaseConfig = {
+  apiKey: 'AIzaSyDc_nx0Kiwkr4o-uMa2qH7ylgTOTOw5gi0',
+  authDomain: 'chat-app-ff38f.firebaseapp.com',
+  projectId: 'chat-app-ff38f',
+  storageBucket: 'chat-app-ff38f.firebasestorage.app',
+  messagingSenderId: '64032007449',
+  appId: '1:64032007449:web:40fc34d22fc0fd85e8d188',
+  };
+
+  /* Initialize Firebase */
+  const app = initializeApp(firebaseConfig);
+
+  /* Initialize Cloud Firestore and get a reference to the service */
+  const db = getFirestore(app);
+
   return (
     <SafeAreaProvider>
       <NavigationContainer>
@@ -23,9 +40,9 @@ export default function App() {
           
           {/* Chat screen */}
           <Stack.Screen
-            name='Chat'
-            component={Chat}
-          />
+            name="Chat">
+            {props => <Chat db={db} {...props} />}
+          </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style='auto' />
@@ -41,3 +58,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+export default App;
