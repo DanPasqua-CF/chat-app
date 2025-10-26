@@ -6,20 +6,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+/* Create the navigator */
+const Stack = createNativeStackNavigator();
+
 /* Screen imports */
 import Start from './components/Start';
 import Chat from './components/Chat';
 
-const Stack = createNativeStackNavigator();
-
-const App = () => {
+export default function App() {
   const firebaseConfig = {
-  apiKey: 'AIzaSyDc_nx0Kiwkr4o-uMa2qH7ylgTOTOw5gi0',
-  authDomain: 'chat-app-ff38f.firebaseapp.com',
-  projectId: 'chat-app-ff38f',
-  storageBucket: 'chat-app-ff38f.firebasestorage.app',
-  messagingSenderId: '64032007449',
-  appId: '1:64032007449:web:40fc34d22fc0fd85e8d188',
+    apiKey: 'AIzaSyDc_nx0Kiwkr4o-uMa2qH7ylgTOTOw5gi0',
+    authDomain: 'chat-app-ff38f.firebaseapp.com',
+    projectId: 'chat-app-ff38f',
+    storageBucket: 'chat-app-ff38f.firebasestorage.app',
+    messagingSenderId: '64032007449',
+    appId: '1:64032007449:web:40fc34d22fc0fd85e8d188',
   };
 
   /* Initialize Firebase */
@@ -32,6 +33,7 @@ const App = () => {
     <SafeAreaProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName='Start'>
+
           {/* Start screen */}
           <Stack.Screen
             name='Start'
@@ -40,7 +42,8 @@ const App = () => {
           
           {/* Chat screen */}
           <Stack.Screen
-            name="Chat">
+            name='Chat'
+          >
             {props => <Chat db={db} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
@@ -56,7 +59,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+  }
 });
-
-export default App;
