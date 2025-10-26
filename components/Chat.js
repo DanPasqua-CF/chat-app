@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bubble, GiftedChat } from 'react-native-gifted-chat';
 
@@ -60,24 +60,24 @@ const Chat = ({ route, navigation }) => {
     />
   }
 
- return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <GiftedChat
+          renderBubble={renderBubble}
           messages={messages}
           onSend={onSend}
-          user={{ _id: 1 }}
-          renderBubble={renderBubble}
+          user={{ 
+            _id: 1 
+          }}
           placeholder="Type a message..."
           alwaysShowSend
-          keyboardShouldPersistTaps="handled"
-          textInputProps={{
-            autoCorrect: false,
-            autoCapitalize: 'none',
-          }}
         />
-      </SafeAreaView>
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
