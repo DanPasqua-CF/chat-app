@@ -1,49 +1,42 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import { Platform, StyleSheet, View } from 'react-native';
+import { GiftedChat, Bubble } from 'react-native-gifted-chat';
+import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 
-const Chat = ({ route, navigation }) => {
-  const { name } = route.params;
+const Chat = ({ route, navigation, db }) => {
+  // Add safety checks
+  if (!route || !route.params) {
+    console.error('Route or route.params is undefined');
+    return null;
+  }
+  
+  const { name, userID } = route.params;
   const [messages, setMessages] = useState([]);
-
-  useEffect(() => {
-    setMessages([
-      {
-        _id: 3,
-        text: "Hi there!",
-        createdAt: new Date(Date.now() - 2000),
-        user: {
-          _id: 1,
-          name: "React Native",
-          avatar: "https://placeimg.com/140/140/any"
-        }
-      },
-      {
-        _id: 2,
-        text: "Hello developer!",
-        createdAt: new Date(Date.now() - 1000),
-        user: {
-          _id: 2,
-          name: "React Native",
-          avatar: "https://placeimg.com/140/140/any"
-        }
-      },
-      {
-        _id: 1,
-        text: `${name} has entered the chat`,
-        createdAt: new Date(),
-        system: true
-      }
-    ]);
-  }, [name]);
+  const [text, setText] = useState('');
 
   useEffect(() => {
     navigation.setOptions({ title: name });
-  }, [name]);
+
+    const messagesQuery = query(
+      collection(db, 'messages'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const newMessages = snapshot.docs.map((doc) => ({
+        _id: doc.id,
+        ...doc.data(),
+        createdAt: new Date(doc.data().createdAt.toMillis()),
+      }));
+      setMessages(newMessages);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const onSend = (newMessages) => {
-    setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
+    addDoc(collection(db, "messages"), newMessages[0]);
+    setText('');
   }
 
   const renderBubble = (props) => {
@@ -62,30 +55,27 @@ const Chat = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <GiftedChat
-          messages={messages}
-          onSend={onSend}
-          user={{ _id: 1 }}
-          renderBubble={renderBubble}
-          placeholder="Type a message..."
-          alwaysShowSend
-          keyboardShouldPersistTaps="handled"
-          textInputProps={{
-            autoCorrect: false,
-            autoCapitalize: 'none',
-          }}
-        />
-      </SafeAreaView>
+      <GiftedChat
+        messages={messages}
+        onSend={onSend}
+        text={text}
+        onInputTextChanged={setText}
+        user={{ 
+          _id: userID,
+          name: name
+        }}
+        renderBubble={renderBubble}
+        placeholder="Type a message..."
+        alwaysShowSend
+        minComposerHeight={40}
+        maxComposerHeight={100}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  safeArea: {
     flex: 1,
     backgroundColor: '#fff',
   }

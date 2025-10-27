@@ -9,10 +9,10 @@ config.transformer = {
 
 config.resolver = {
   ...config.resolver,
-  // Remove 'svg' from assetExts so Metro treats them as source files
   assetExts: config.resolver.assetExts.filter(ext => ext !== 'svg'),
-  // Add 'svg' to sourceExts so they are processed by the transformer
-  sourceExts: [...config.resolver.sourceExts, 'svg'],
+  sourceExts: [...config.resolver.sourceExts, 'svg'],  
+  sourceExts: [...config.resolver.sourceExts, 'cjs'],
+  unstable_enablePackageExports: false,
 };
 
 module.exports = config;

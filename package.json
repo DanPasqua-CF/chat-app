@@ -12,6 +12,7 @@
     "reset-cache": "npx react-native start --reset-cache"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/native-stack": "^7.3.26",
     "expo": "54.0.19",
