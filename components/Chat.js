@@ -1,65 +1,64 @@
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  Platform,
-  StyleSheet,
-  KeyboardAvoidingView,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { GiftedChat, Bubble, InputToolbar } from "react-native-gifted-chat";
-import {
-  addDoc,
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-} from "firebase/firestore";
+import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const Chat = ({ route, navigation, db }) => {
+const Chat = ({ route, navigation, db, isConnected }) => {
   if (!route?.params) return null;
 
   const { name, userID } = route.params;
   const [messages, setMessages] = useState([]);
+  let unsubMessages;
 
-  // Load Firestore messages
+  /* Load Firestore messages */
   useEffect(() => {
     navigation.setOptions({ title: name });
-    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const newMsgs = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          _id: doc.id,
-          text: data.text || "",
-          createdAt: data.createdAt?.toDate
-            ? data.createdAt.toDate()
-            : new Date(),
-          user: data.user,
-        };
-      });
-      setMessages(newMsgs);
-    });
-    return unsub;
-  }, [db, navigation, name]);
 
-  // Send message
-  const handleSend = useCallback(
-    async (newMessages = []) => {
-      const { _id, text, createdAt, user } = newMessages[0];
-      try {
-        await addDoc(collection(db, "messages"), {
-          _id,
-          text,
-          createdAt,
-          user,
+    if (isConnected === true) {
+      if (unsubMessages) unsubMessages();
+      unsubMessages = null;
+
+      const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+
+      unsubMessages = onSnapshot(q, async (docs) => {
+        let newMessages = [];
+
+        docs.forEach((doc) => {
+          newMessages.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: new Date(doc.data().createdAt.toMillis())
+          });
         });
-      } catch (err) {
-        console.error("Send error:", err);
-      }
-    },
-    [db]
-  );
+        cacheMessages(newMessages);
+        setMessages(newMessages);
+      })
+    }
+    else {
+      loadCachedMessages();
+    }
 
-  // Custom bubble style
+    return () => {
+      if (unsubMessages) unsubMessages();
+    }    
+  }, [isConnected]);
+
+  const cacheMessages = async (messagesToCache) => {
+    try {
+      await AsyncStorage.setItem("messages", JSON.stringify(messagesToCache));
+    } 
+    catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  const loadCachedMessages = async () => {
+    const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
+    setMessages(JSON.parse(cachedMessages));
+  };
+
+  /* Custom bubble style */
   const renderBubble = (props) => (
     <Bubble
       {...props}
@@ -74,7 +73,7 @@ const Chat = ({ route, navigation, db }) => {
     />
   );
 
-  // Custom input toolbar for better styling
+  /* Custom input toolbar for better styling */
   const renderInputToolbar = (props) => (
     <InputToolbar
       {...props}
@@ -85,43 +84,17 @@ const Chat = ({ route, navigation, db }) => {
 
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        <GiftedChat
-          messages={messages}
-          onSend={handleSend}
-          user={{ _id: userID, name }}
-          renderBubble={renderBubble}
-          renderInputToolbar={renderInputToolbar}
-          placeholder="Type a message..."
-          alwaysShowSend
-          renderAvatarOnTop
-          // CRITICAL: These props fix the iOS keyboard issue
-          keyboardShouldPersistTaps="handled"
-          scrollToBottom
-          minComposerHeight={44}
-          maxComposerHeight={100}
-          // CRITICAL: Proper text input configuration
-          textInputProps={{
-            editable: true,
-            autoFocus: false,
-            blurOnSubmit: false,
-            returnKeyType: "send",
-            enablesReturnKeyAutomatically: true,
-            multiline: true,
-            style: styles.textInput,
-          }}
-          textInputStyle={styles.composer}
-          // Better list behavior
-          listViewProps={{
-            keyboardShouldPersistTaps: "handled",
-            keyboardDismissMode: Platform.OS === "ios" ? "interactive" : "on-drag",
-          }}
-        />
-      </KeyboardAvoidingView>
+      <GiftedChat
+        messages={messages}
+        renderBubble={renderBubble}
+        renderInputToolbar={renderInputToolbar}
+        onSend={messages => onSend(messages)}
+        user={{
+          _id: route.params.userID,
+          name: name
+        }}
+      />
+      {Platform.OS === 'android' ? <KeyboardAvoidingView behavior="height" /> : null}
     </View>
   );
 };
