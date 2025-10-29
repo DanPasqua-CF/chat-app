@@ -1,10 +1,18 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const config = getDefaultConfig(__dirname);
 
-module.exports = (() => {
-  const config = getDefaultConfig(__dirname);
+// Configure SVGs to be handled as React components
+config.transformer = {
+  ...config.transformer,
+  babelTransformerPath: require.resolve('react-native-svg-transformer'),
+};
 
-  config.resolver.sourceExts.push('cjs');
-  config.resolver.unstable_enablePackageExports = false;
+config.resolver = {
+  ...config.resolver,
+  assetExts: config.resolver.assetExts.filter(ext => ext !== 'svg'),
+  sourceExts: [...config.resolver.sourceExts, 'svg'],  
+  sourceExts: [...config.resolver.sourceExts, 'cjs'],
+  unstable_enablePackageExports: false,
+};
 
-  return config;
-})();
+module.exports = config;

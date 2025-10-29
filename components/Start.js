@@ -2,23 +2,17 @@ import React, { useState } from 'react';
 import { Alert, ImageBackground, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { signInAnonymously } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
-import { auth } from '../firebase';
 
 const colorOptions = ['#090C08', '#474056', '#8A95A5', '#B9C6AE'];
 
-const Start = ({ navigation }) => {
+const Start = ({ navigation, auth }) => {
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(colorOptions[0]);
 
   const signInUser = () => {
     signInAnonymously(auth)
       .then((res) => {
-        navigation.navigate("Chat", 
-          { 
-            userID: res.user.uid, 
-            name: name, 
-            backgroundColor: selectedColor 
-          });
+        navigation.navigate("Chat", { userID: res.user.uid, name: name, backgroundColor: selectedColor });
 
         Alert.alert("Signin successful");
       })
@@ -56,7 +50,7 @@ const Start = ({ navigation }) => {
           <TouchableOpacity
             accessible={true}
             accessibilityLabel="Start chatting"
-            accessibilityHint="Let’s you start chatting"
+            accessibilityHint="Let's you start chatting"
             style={[styles.button, { backgroundColor: '#757083' }]}
             onPress={signInUser}
           >
@@ -145,16 +139,6 @@ const styles = StyleSheet.create({
   },
   selectedCircle: {
     borderColor: '#5F5D66',
-  },
-  button: {
-    width: '100%',
-    paddingVertical: 20,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
   },
 });
 
