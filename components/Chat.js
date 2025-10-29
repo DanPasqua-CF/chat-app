@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Platform,
-  SafeAreaView,
   StyleSheet,
   KeyboardAvoidingView,
+  View,
 } from "react-native";
-import { GiftedChat, Bubble } from "react-native-gifted-chat";
+import { GiftedChat, Bubble, InputToolbar } from "react-native-gifted-chat";
 import {
   addDoc,
   collection,
@@ -20,7 +20,7 @@ const Chat = ({ route, navigation, db }) => {
   const { name, userID } = route.params;
   const [messages, setMessages] = useState([]);
 
-  // 🔹 Load Firestore messages
+  // Load Firestore messages
   useEffect(() => {
     navigation.setOptions({ title: name });
     const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
@@ -41,10 +41,9 @@ const Chat = ({ route, navigation, db }) => {
     return unsub;
   }, [db, navigation, name]);
 
-  // 🔹 Send message
+  // Send message
   const handleSend = useCallback(
     async (newMessages = []) => {
-      setMessages((prev) => GiftedChat.append(prev, newMessages));
       const { _id, text, createdAt, user } = newMessages[0];
       try {
         await addDoc(collection(db, "messages"), {
@@ -60,7 +59,7 @@ const Chat = ({ route, navigation, db }) => {
     [db]
   );
 
-  // 🔹 Custom bubble style
+  // Custom bubble style
   const renderBubble = (props) => (
     <Bubble
       {...props}
@@ -75,53 +74,90 @@ const Chat = ({ route, navigation, db }) => {
     />
   );
 
+  // Custom input toolbar for better styling
+  const renderInputToolbar = (props) => (
+    <InputToolbar
+      {...props}
+      containerStyle={styles.inputToolbar}
+      primaryStyle={styles.inputPrimary}
+    />
+  );
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.container}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <GiftedChat
           messages={messages}
-          onSend={(msgs) => handleSend(msgs)}
+          onSend={handleSend}
           user={{ _id: userID, name }}
           renderBubble={renderBubble}
+          renderInputToolbar={renderInputToolbar}
           placeholder="Type a message..."
           alwaysShowSend
           renderAvatarOnTop
+          // CRITICAL: These props fix the iOS keyboard issue
           keyboardShouldPersistTaps="handled"
+          scrollToBottom
           minComposerHeight={44}
           maxComposerHeight={100}
+          // CRITICAL: Proper text input configuration
           textInputProps={{
             editable: true,
+            autoFocus: false,
+            blurOnSubmit: false,
+            returnKeyType: "send",
+            enablesReturnKeyAutomatically: true,
             multiline: true,
-            style: {
-              color: "#000",
-              paddingHorizontal: 8,
-              fontSize: 16,
-            },
+            style: styles.textInput,
           }}
-          composerStyle={{
-            backgroundColor: "#fff",
-            borderWidth: 1,
-            borderColor: "#ddd",
-            borderRadius: 20,
-            paddingHorizontal: 10,
+          textInputStyle={styles.composer}
+          // Better list behavior
+          listViewProps={{
+            keyboardShouldPersistTaps: "handled",
+            keyboardDismissMode: Platform.OS === "ios" ? "interactive" : "on-drag",
           }}
         />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safe: {
+  container: {
     flex: 1,
     backgroundColor: "#fff",
   },
-  container: {
+  keyboardView: {
     flex: 1,
+  },
+  inputToolbar: {
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
+    backgroundColor: "#fff",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  inputPrimary: {
+    alignItems: "center",
+  },
+  textInput: {
+    color: "#000",
+    fontSize: 16,
+    lineHeight: 20,
+    paddingTop: Platform.OS === "ios" ? 8 : 4,
+    paddingHorizontal: 12,
+  },
+  composer: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    marginLeft: 0,
   },
 });
 
