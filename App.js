@@ -4,9 +4,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { disableNetwork, enableNetwork, getFirestore } from "firebase/firestore";
 import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getStorage } from 'firebase/storage';
+import { useNetInfo } from '@react-native-community/netinfo';
 
 /* Screen imports */
 import Start from './components/Start';
@@ -35,6 +37,18 @@ if (getApps().length === 0) {
 
 // Initialize Firestore
 db = getFirestore(app);
+
+const storage = getStorage(app);
+  const netInfo = useNetInfo();
+
+  useEffect(() => {
+    if (netInfo.isConnected === false) {
+      Alert.alert("Connection lost")
+      disableNetwork(db);
+    } else if (netInfo.isConnected === true) {
+      enableNetwork(db);
+    }
+  }, [netInfo.isConnected]);
 
 // Initialize Firebase Authentication with AsyncStorage persistence
 if (Platform.OS === 'web') {
@@ -70,7 +84,7 @@ export default function App() {
           
           {/* Chat screen */}
           <Stack.Screen name='Chat'>
-            {(props) => <Chat db={db} {...props} />}
+            {(props) => <Chat db={db} storage={storage} isConnected={netInfo.isConnected} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
