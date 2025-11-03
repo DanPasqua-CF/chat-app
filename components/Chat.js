@@ -1,45 +1,43 @@
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  Platform,
-  StyleSheet,
-  KeyboardAvoidingView,
-  View,
-} from "react-native";
+import { Platform, StyleSheet, KeyboardAvoidingView, View } from "react-native";
 import { GiftedChat, Bubble, InputToolbar } from "react-native-gifted-chat";
-import {
-  addDoc,
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-} from "firebase/firestore";
+import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Chat = ({ route, navigation, db }) => {
+const Chat = ({ route, navigation, db, isConnected, storage }) => {
   if (!route?.params) return null;
 
   const { name, userID } = route.params;
   const [messages, setMessages] = useState([]);
+  let unsubMessages;
 
-  // Load Firestore messages
+  /* Load Firestore messages */
   useEffect(() => {
     navigation.setOptions({ title: name });
-    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const newMsgs = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          _id: doc.id,
-          text: data.text || "",
-          createdAt: data.createdAt?.toDate
-            ? data.createdAt.toDate()
-            : new Date(),
-          user: data.user,
-        };
-      });
-      setMessages(newMsgs);
-    });
-    return unsub;
-  }, [db, navigation, name]);
+    if (isConnected === true) {
+
+      if (unsubMessages) unsubMessages();
+      unsubMessages = null;
+
+      const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+      unsubMessages = onSnapshot(q, async (docs) => {
+        let newMessages = [];
+        docs.forEach(doc => {
+          newMessages.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: new Date(doc.data().createdAt.toMillis())
+          })
+        })
+        cacheMessages(newMessages);
+        setMessages(newMessages);
+      })
+    } else loadCachedMessages();
+
+    return () => {
+      if (unsubMessages) unsubMessages();
+    }
+  }, [isConnected]);
 
   // Send message
   const handleSend = useCallback(
@@ -59,7 +57,20 @@ const Chat = ({ route, navigation, db }) => {
     [db]
   );
 
-  // Custom bubble style
+  const cacheMessages = async (messagesToCache) => {
+    try {
+      await AsyncStorage.setItem('messages', JSON.stringify(messagesToCache));
+    } catch (error) {
+      console.error('Failed to cache messages', error);
+    }
+  };
+
+  const loadCachedMessages = async () => {
+    const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
+    setMessages(JSON.parse(cachedMessages));
+  };
+
+  /* Custom bubble style */
   const renderBubble = (props) => (
     <Bubble
       {...props}
@@ -74,7 +85,7 @@ const Chat = ({ route, navigation, db }) => {
     />
   );
 
-  // Custom input toolbar for better styling
+  /* Custom input toolbar */
   const renderInputToolbar = (props) => (
     <InputToolbar
       {...props}
@@ -99,12 +110,10 @@ const Chat = ({ route, navigation, db }) => {
           placeholder="Type a message..."
           alwaysShowSend
           renderAvatarOnTop
-          // CRITICAL: These props fix the iOS keyboard issue
           keyboardShouldPersistTaps="handled"
           scrollToBottom
           minComposerHeight={44}
           maxComposerHeight={100}
-          // CRITICAL: Proper text input configuration
           textInputProps={{
             editable: true,
             autoFocus: false,
@@ -115,7 +124,6 @@ const Chat = ({ route, navigation, db }) => {
             style: styles.textInput,
           }}
           textInputStyle={styles.composer}
-          // Better list behavior
           listViewProps={{
             keyboardShouldPersistTaps: "handled",
             keyboardDismissMode: Platform.OS === "ios" ? "interactive" : "on-drag",

@@ -2,7 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
+import { useEffect } from 'react';
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { disableNetwork, enableNetwork, getFirestore } from "firebase/firestore";
 import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
@@ -37,18 +38,7 @@ if (getApps().length === 0) {
 
 // Initialize Firestore
 db = getFirestore(app);
-
 const storage = getStorage(app);
-  const netInfo = useNetInfo();
-
-  useEffect(() => {
-    if (netInfo.isConnected === false) {
-      Alert.alert("Connection lost")
-      disableNetwork(db);
-    } else if (netInfo.isConnected === true) {
-      enableNetwork(db);
-    }
-  }, [netInfo.isConnected]);
 
 // Initialize Firebase Authentication with AsyncStorage persistence
 if (Platform.OS === 'web') {
@@ -73,6 +63,17 @@ if (Platform.OS === 'web') {
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const netInfo = useNetInfo();
+
+  useEffect(() => {
+    if (netInfo.isConnected === false) {
+      Alert.alert("Connection lost");
+      disableNetwork(db);
+    } else if (netInfo.isConnected === true) {
+      enableNetwork(db);
+    }
+  }, [netInfo.isConnected]);
+
   return (
     <SafeAreaProvider>
       <NavigationContainer>
