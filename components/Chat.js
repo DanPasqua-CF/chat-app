@@ -86,13 +86,10 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
   );
 
   /* Custom input toolbar */
-  const renderInputToolbar = (props) => (
-    <InputToolbar
-      {...props}
-      containerStyle={styles.inputToolbar}
-      primaryStyle={styles.inputPrimary}
-    />
-  );
+  const renderInputToolbar = (props) => {
+    if (isConnected) return <InputToolbar {...props} />;
+    else return null;
+  };
 
   return (
     <View style={styles.container}>
