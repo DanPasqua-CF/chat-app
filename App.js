@@ -2,7 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform, Alert } from 'react-native';
+import { ActionSheetProvider } from '@expo/react-native-action-sheet';
+import { Platform, Alert, View } from 'react-native';
 import { useEffect } from 'react';
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { disableNetwork, enableNetwork, getFirestore } from "firebase/firestore";
@@ -62,8 +63,11 @@ if (Platform.OS === 'web') {
 /* Create the navigator */
 const Stack = createNativeStackNavigator();
 
-export default function App() {
+function AppContent() {
   const netInfo = useNetInfo();
+  
+  // Default to true if netInfo is not yet available
+  const isConnected = netInfo.isConnected ?? true;
 
   useEffect(() => {
     if (netInfo.isConnected === false) {
@@ -75,21 +79,29 @@ export default function App() {
   }, [netInfo.isConnected]);
 
   return (
-    <SafeAreaProvider>
+    <View style={{ flex: 1 }}>
       <NavigationContainer>
         <Stack.Navigator initialRouteName='Start'>
-          {/* Start screen */}
           <Stack.Screen name='Start'>
             {(props) => <Start auth={auth} {...props} />}
           </Stack.Screen>
           
-          {/* Chat screen */}
           <Stack.Screen name='Chat'>
-            {(props) => <Chat db={db} storage={storage} isConnected={netInfo.isConnected} {...props} />}
+            {(props) => <Chat db={db} storage={storage} isConnected={isConnected} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
       <StatusBar style='auto' />
+    </View>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <ActionSheetProvider>
+        <AppContent />
+      </ActionSheetProvider>
     </SafeAreaProvider>
   );
 }

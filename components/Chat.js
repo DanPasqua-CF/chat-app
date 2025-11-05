@@ -1,8 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Platform, StyleSheet, KeyboardAvoidingView, View } from "react-native";
+import { Platform, StyleSheet, KeyboardAvoidingView, View, Text } from "react-native";
 import { GiftedChat, Bubble, InputToolbar } from "react-native-gifted-chat";
 import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CustomActions from './CustomActions';
+
+// Conditionally import MapView only for native platforms
+let MapView = null;
+if (Platform.OS !== 'web') {
+  MapView = require('react-native-maps').default;
+}
 
 const Chat = ({ route, navigation, db, isConnected, storage }) => {
   if (!route?.params) return null;
@@ -42,15 +49,19 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
   // Send message
   const handleSend = useCallback(
     async (newMessages = []) => {
-      const { _id, text, createdAt, user } = newMessages[0];
+      const { _id, text, createdAt, user, image, location } = newMessages[0];
+      
       try {
         await addDoc(collection(db, "messages"), {
           _id,
           text,
           createdAt,
           user,
+          ...(image && { image }),
+          ...(location && { location }),
         });
-      } catch (err) {
+      } 
+      catch (err) {
         console.error("Send error:", err);
       }
     },
@@ -60,7 +71,8 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
   const cacheMessages = async (messagesToCache) => {
     try {
       await AsyncStorage.setItem('messages', JSON.stringify(messagesToCache));
-    } catch (error) {
+    } 
+    catch (error) {
       console.error('Failed to cache messages', error);
     }
   };
@@ -91,6 +103,73 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
     else return null;
   };
 
+  const renderCustomActions = (props) => {
+    // Only render on native platforms
+    if (Platform.OS === 'web') return null;
+    
+    return (
+      <CustomActions 
+        userID={userID} 
+        storage={storage}
+        onSend={handleSend} 
+        {...props} 
+      />
+    );
+  };
+
+  const renderCustomView = (props) => {
+    const { currentMessage } = props;
+    console.log("renderCustomView currentMessage:", currentMessage)
+    if (currentMessage.location) {
+      console.log("renderCustomView location data:", currentMessage.location);
+      const { latitude, longitude } = currentMessage.location;
+      
+      // For web: show a link to Google Maps
+      if (Platform.OS === 'web') {
+        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        
+        return (
+          <View style={{
+            padding: 10,
+            margin: 3,
+            borderRadius: 13,
+            backgroundColor: '#f0f0f0',
+            maxWidth: 150,
+          }}>
+            <Text style={{ fontSize: 12, marginBottom: 5 }}>📍 Location shared</Text>
+            <Text 
+              style={{ color: '#007AFF', fontSize: 11, textDecorationLine: 'underline' }}
+              onPress={() => window.open(googleMapsUrl, '_blank')}
+            >
+              View on Google Maps
+            </Text>
+          </View>
+        );
+      }
+      
+      // For native: show MapView
+      if (MapView) {
+        return (
+          <MapView
+            style={{
+              width: 150,
+              height: 100,
+              borderRadius: 13,
+              margin: 3
+            }}
+            region={{
+              latitude: latitude,
+              longitude: longitude,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+          />
+        );
+      }
+    }
+    return null;
+  }
+
   return (
     <View style={styles.container}>
       <KeyboardAvoidingView
@@ -104,6 +183,8 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
           user={{ _id: userID, name }}
           renderBubble={renderBubble}
           renderInputToolbar={renderInputToolbar}
+          renderActions={renderCustomActions}
+          renderCustomView={renderCustomView}
           placeholder="Type a message..."
           alwaysShowSend
           renderAvatarOnTop

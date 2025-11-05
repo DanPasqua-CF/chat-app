@@ -16,16 +16,50 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourdomain.chatapp"
+      "bundleIdentifier": "com.yourdomain.chatapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to let you take photos and share them in chat.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to let you share images in chat.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to let you share where you are with friends."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.danpasquacf.chatapp",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDc_nx0Kiwkr4o-uMa2qH7ylgTOTOw5gi0"
+        }
       }
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share images in chat.",
+          "cameraPermission": "The app accesses your camera to let you take photos and share them in chat."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow chat-app to use your location to share where you are with friends."
+        }
+      ]
+    ]
   }
 }
