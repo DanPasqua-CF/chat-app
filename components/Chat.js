@@ -5,7 +5,7 @@ import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firesto
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomActions from './CustomActions';
 
-// Conditionally import MapView only for native platforms
+/* Conditionally import MapView only for native platforms */
 let MapView = null;
 if (Platform.OS !== 'web') {
   MapView = require('react-native-maps').default;
@@ -50,20 +50,18 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
     }
   }, [isConnected]);
 
-  // Send message
+  /* Send message */
   const handleSend = useCallback(
     async (newMessages = []) => {
       const message = newMessages[0];
       
       try {
-        // Create the message document without _id (Firestore will generate it)
         const messageData = {
           text: message.text || '',
           createdAt: message.createdAt || new Date(),
           user: message.user,
         };
         
-        // Add optional fields if they exist
         if (message.image) {
           messageData.image = message.image;
         }
@@ -134,7 +132,6 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
   };
 
   const renderCustomActions = (props) => {
-    // Only render on native platforms
     if (Platform.OS === 'web') return null;
     
     return (
@@ -152,7 +149,6 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
     if (currentMessage?.location) {
       const { latitude, longitude } = currentMessage.location;
       
-      // For web: show a link to Google Maps
       if (Platform.OS === 'web') {
         const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
         
@@ -175,7 +171,6 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
         );
       }
       
-      // For native: show MapView
       if (MapView) {
         return (
           <MapView

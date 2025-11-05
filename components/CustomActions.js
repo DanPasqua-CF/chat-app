@@ -1,16 +1,17 @@
-import { TouchableOpacity, View, Text, StyleSheet, Alert } from "react-native";
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
-import { useActionSheet } from '@expo/react-native-action-sheet';
+import { TouchableOpacity, View, Text, StyleSheet, Alert, Platform } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const CustomActions = ({ wrapperStyle, iconTextStyle, storage, onSend, userID }) => {
   const actionSheet = useActionSheet();
 
+  /* Action Sheet menu */
   const onActionPress = () => {
-    const options = ['Choose From Library', 'Take Picture', 'Send Location', 'Cancel'];
+    const options = ["Choose From Library", "Take Picture", "Send Location", "Cancel"];
     const cancelButtonIndex = options.length - 1;
-    
+
     actionSheet.showActionSheetWithOptions(
       {
         options,
@@ -19,92 +20,146 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, storage, onSend, userID })
       async (buttonIndex) => {
         switch (buttonIndex) {
           case 0:
-            pickImage();
-            return;
+            await pickImage();
+            break;
           case 1:
-            takePhoto()
-            return;
+            await takePhoto();
+            break;
           case 2:
-            getLocation();
+            await handleGetLocation();
+            break;
           default:
+            return;
         }
-      },
+      }
     );
   };
 
+  /* Pick an image from Library */
   const pickImage = async () => {
-    let permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissions?.granted) {
-      let result = await ImagePicker.launchImageLibraryAsync();
-      console.log('Image Picker Result:', result);
-      console.log('Image URI:', result.assets?.[0]?.uri);
-      if (!result.canceled) await uploadAndSendImage(result.assets[0].uri);
-      else Alert.alert("Permissions haven't been granted.");
-    }
-  }
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Please allow access to your photo library.");
+        return;
+      }
 
-  const takePhoto = async () => {
-    let permissions = await ImagePicker.requestCameraPermissionsAsync();
-    if (permissions?.granted) {
-      let result = await ImagePicker.launchCameraAsync();
-      console.log('Camera Result:', result);
-      console.log('Camera URI:', result.assets?.[0]?.uri);
-      if (!result.canceled) await uploadAndSendImage(result.assets[0].uri);
-      else Alert.alert("Permissions haven't been granted.");
+      const result = await ImagePicker.launchImageLibraryAsync();
+      if (!result.canceled) {
+        await uploadAndSendImage(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.error("Image Picker Error:", err);
+      Alert.alert("Error", "Could not select image.");
     }
-  }
-
-  const getLocation = async () => {
-    let permissions = await Location.requestForegroundPermissionsAsync();
-    if (permissions?.granted) {
-      const location = await Location.getCurrentPositionAsync({});
-      console.log('Fetched Location:', location);
-      if (location) {
-        onSend([ // Wrap the entire message object in an array
-          {
-            createdAt: new Date(),
-            user: {
-              _id: userID,
-            },
-            location: {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            },
-          },
-        ]);
-      } else Alert.alert("Error occurred while fetching location");
-    } else Alert.alert("Permissions haven't been granted.");
   };
 
+  /* Take a photo */
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Please allow camera access.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync();
+      if (!result.canceled) {
+        await uploadAndSendImage(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.error("Camera Error:", err);
+      Alert.alert("Error", "Could not take photo.");
+    }
+  };
+
+  /* Get location */
+  const handleGetLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Please allow location access.");
+        return;
+      }
+
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled && Platform.OS === "android") {
+        Alert.alert(
+          "Location Services Disabled",
+          "Please enable location services in emulator settings."
+        );
+      }
+
+      let location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      // Handle emulator returning default or invalid coordinates
+      if (!location || (location.coords.latitude === 0 && location.coords.longitude === 0)) {
+        console.warn("Using mock location (emulator likely has no GPS signal).");
+        
+        location = {
+          coords: {
+            latitude: 37.7749,
+            longitude: -122.4194,
+          },
+        };
+
+        Alert.alert("Mock Location", "Using mock location for emulator testing.");
+      }
+
+      console.log("Fetched Location:", location);
+
+      const message = {
+        _id: Date.now(),
+        createdAt: new Date(),
+        user: { _id: userID },
+        location: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+      };
+
+      onSend?.([message]);
+    } 
+    catch (error) {
+      console.error("Error fetching location:", error);
+      Alert.alert("Error", "Unable to fetch your location.");
+    }
+  };
+
+  /* Upload and send image */
   const generateReference = (uri) => {
-    // this will get the file name from the uri
-    const imageName = uri.split("/")[uri.split("/").length - 1];
-    const timeStamp = (new Date()).getTime();
+    const imageName = uri.split("/").pop();
+    const timeStamp = new Date().getTime();
     return `${userID}-${timeStamp}-${imageName}`;
-  }
+  };
 
   const uploadAndSendImage = async (imageURI) => {
-    console.log('uploadAndSendImage called with URI:', imageURI);
-    if (!imageURI) {
-      console.error('Error: imageURI is undefined in uploadAndSendImage');
-      return;
-    }
-    const uniqueRefString = generateReference(imageURI);
-    const newUploadRef = ref(storage, uniqueRefString);
-    const response = await fetch(imageURI);
-    const blob = await response.blob();
-    uploadBytes(newUploadRef, blob).then(async (snapshot) => {
-      const imageURL = await getDownloadURL(snapshot.ref)
-      onSend([{
-        image: imageURL,
-        createdAt: new Date(),
-        user: {
-          _id: userID
-        }
-      }]);
-    });
-  }
+    try {
+      const uniqueRefString = generateReference(imageURI);
+      const newUploadRef = ref(storage, uniqueRefString);
+      const response = await fetch(imageURI);
+      const blob = await response.blob();
 
+      const snapshot = await uploadBytes(newUploadRef, blob);
+      const imageURL = await getDownloadURL(snapshot.ref);
+
+      onSend?.([
+        {
+          _id: Date.now(),
+          createdAt: new Date(),
+          user: { _id: userID },
+          image: imageURL,
+        },
+      ]);
+    } catch (err) {
+      console.error("Upload Error:", err);
+      Alert.alert("Error", "Failed to upload image.");
+    }
+  };
+
+  /* Custom Action button */
   return (
     <TouchableOpacity style={styles.container} onPress={onActionPress}>
       <View style={[styles.wrapper, wrapperStyle]}>
@@ -112,7 +167,7 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, storage, onSend, userID })
       </View>
     </TouchableOpacity>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -123,16 +178,16 @@ const styles = StyleSheet.create({
   },
   wrapper: {
     borderRadius: 13,
-    borderColor: '#b2b2b2',
+    borderColor: "#b2b2b2",
     borderWidth: 2,
     flex: 1,
   },
   iconText: {
-    color: '#b2b2b2',
-    fontWeight: 'bold',
+    color: "#b2b2b2",
+    fontWeight: "bold",
     fontSize: 16,
-    backgroundColor: 'transparent',
-    textAlign: 'center',
+    backgroundColor: "transparent",
+    textAlign: "center",
   },
 });
 

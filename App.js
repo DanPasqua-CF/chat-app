@@ -30,31 +30,31 @@ let app;
 let db;
 let auth;
 
-// Check if Firebase is already initialized
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
 } else {
   app = getApp();
 }
 
-// Initialize Firestore
+/* Initialize Firestore */
 db = getFirestore(app);
 const storage = getStorage(app);
 
-// Initialize Firebase Authentication with AsyncStorage persistence
+/* Initialize Firebase Authentication with AsyncStorage persistence */
 if (Platform.OS === 'web') {
   auth = getAuth(app);
-} else {
-  // For React Native, use initializeAuth with AsyncStorage
+} 
+else {
   try {
     auth = initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
-  } catch (error) {
-    // If already initialized, just get it
+  } 
+  catch (error) {
     if (error.code === 'auth/already-initialized') {
       auth = getAuth(app);
-    } else {
+    } 
+    else {
       console.error("Auth initialization error:", error);
     }
   }
@@ -66,14 +66,15 @@ const Stack = createNativeStackNavigator();
 function AppContent() {
   const netInfo = useNetInfo();
   
-  // Default to true if netInfo is not yet available
+  /* Default to true if netInfo is not yet available */
   const isConnected = netInfo.isConnected ?? true;
 
   useEffect(() => {
     if (netInfo.isConnected === false) {
       Alert.alert("Connection lost");
       disableNetwork(db);
-    } else if (netInfo.isConnected === true) {
+    } 
+    else if (netInfo.isConnected === true) {
       enableNetwork(db);
     }
   }, [netInfo.isConnected]);
