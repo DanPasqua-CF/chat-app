@@ -30,10 +30,14 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
       unsubMessages = onSnapshot(q, async (docs) => {
         let newMessages = [];
         docs.forEach(doc => {
+          const data = doc.data();
           newMessages.push({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: new Date(doc.data().createdAt.toMillis())
+            _id: doc.id,
+            text: data.text || '',
+            createdAt: new Date(data.createdAt.toMillis()),
+            user: data.user,
+            ...(data.image && { image: data.image }),
+            ...(data.location && { location: data.location }),
           })
         })
         cacheMessages(newMessages);
@@ -49,19 +53,27 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
   // Send message
   const handleSend = useCallback(
     async (newMessages = []) => {
-      const { _id, text, createdAt, user, image, location } = newMessages[0];
+      const message = newMessages[0];
       
       try {
-        await addDoc(collection(db, "messages"), {
-          _id,
-          text,
-          createdAt,
-          user,
-          ...(image && { image }),
-          ...(location && { location }),
-        });
-      } 
-      catch (err) {
+        // Create the message document without _id (Firestore will generate it)
+        const messageData = {
+          text: message.text || '',
+          createdAt: message.createdAt || new Date(),
+          user: message.user,
+        };
+        
+        // Add optional fields if they exist
+        if (message.image) {
+          messageData.image = message.image;
+        }
+        
+        if (message.location) {
+          messageData.location = message.location;
+        }
+        
+        await addDoc(collection(db, "messages"), messageData);
+      } catch (err) {
         console.error("Send error:", err);
       }
     },
@@ -71,15 +83,33 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
   const cacheMessages = async (messagesToCache) => {
     try {
       await AsyncStorage.setItem('messages', JSON.stringify(messagesToCache));
-    } 
-    catch (error) {
+    } catch (error) {
       console.error('Failed to cache messages', error);
     }
   };
 
   const loadCachedMessages = async () => {
-    const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
-    setMessages(JSON.parse(cachedMessages));
+    try {
+      const cachedMessages = await AsyncStorage.getItem("messages");
+      if (cachedMessages) {
+        const parsedMessages = JSON.parse(cachedMessages);
+        // Ensure all messages have required fields
+        const validMessages = parsedMessages.map(msg => ({
+          _id: msg._id || msg.id || String(Date.now() + Math.random()),
+          text: msg.text || '',
+          createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+          user: msg.user || { _id: userID },
+          ...(msg.image && { image: msg.image }),
+          ...(msg.location && { location: msg.location }),
+        }));
+        setMessages(validMessages);
+      } else {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Failed to load cached messages', error);
+      setMessages([]);
+    }
   };
 
   /* Custom bubble style */
@@ -119,9 +149,7 @@ const Chat = ({ route, navigation, db, isConnected, storage }) => {
 
   const renderCustomView = (props) => {
     const { currentMessage } = props;
-    console.log("renderCustomView currentMessage:", currentMessage)
-    if (currentMessage.location) {
-      console.log("renderCustomView location data:", currentMessage.location);
+    if (currentMessage?.location) {
       const { latitude, longitude } = currentMessage.location;
       
       // For web: show a link to Google Maps
